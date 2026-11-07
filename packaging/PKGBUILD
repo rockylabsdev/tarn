@@ -36,7 +36,7 @@ optdepends=(
   'jq: the Waybar example reads the Shell socket replies'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP') # the real sum is set when the tag is cut
+sha256sums=('91f00837ef2d4e0c3d9c6c0ef1a01a4058d103bea6989569544790ce5adf856a')
 
 build() {
   cmake -S "$pkgname-$pkgver" -B build -G Ninja \
