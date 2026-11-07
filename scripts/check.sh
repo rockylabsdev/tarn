@@ -36,6 +36,9 @@ if [ -z "$only" ] && [ -f "$passed" ] && grep -qx "$tree" "$passed"; then
     echo "check: these exact files already passed; nothing to do." >&2
     exit 0
 fi
+# The words in the repo: docs are where most of them are, so this comes before the
+# docs-only shortcut.
+scripts/text-lint.sh
 # Markdown, docs/ and .claude/ are never built or tested: when only they differ
 # from a commit that passed, the check passes without building.
 head_tree=$(git rev-parse -q --verify 'HEAD^{tree}' || true)
@@ -125,7 +128,9 @@ export FONTCONFIG_FILE="$build_abs/fonts.conf"
 
 cmake -S . -B "$build" -G Ninja $launcher >/dev/null
 printf '%s\n' "$sources" > "$stamp"
-ninja -C "$build"
+# --quiet leaves compiler errors and drops the progress lines: hundreds of them,
+# which fill an agent's context and cut off the end of a hook's output.
+ninja --quiet -C "$build"
 # One test area per core; each area has its own scratch folders. Twice that made
 # timing tests flaky when several checks ran at once.
 if [ -n "$only" ]; then

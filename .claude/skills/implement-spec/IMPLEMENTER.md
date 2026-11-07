@@ -11,9 +11,11 @@ You work alone in your own worktree, on your own branch. The integration branch 
 ## Rules
 
 - **Plain commands.** Write and edit files with Write and Edit, scripts included (write `/tmp/<name>.py` with Write, then run `python3 -I /tmp/<name>.py`). Each Bash call is one plain command, run from the worktree root. Your shell refuses any call it can't prove stays inside the worktree: heredocs, loops, `&&` chains, pipes into files, `cd`, `$(…)`. Split a refused call into plain commands; don't rephrase it into another compound one.
+- **Run the check bare.** `scripts/check.sh --only trim` lowers its own priority, and takes a plain area name. The shell refuses `nice` in front of a quoted `^trim$`.
 - **Waiting.** Run long commands (a build, the check) in the foreground with a long timeout. The harness blocks `sleep`.
 - **Start on the integration branch.** Run `git merge-base --is-ancestor {integration branch} HEAD`. If it exits non-zero, run `git reset --hard {integration branch}` before anything else.
 - **Git config is already set.** The hooks are on for every worktree. Leave `git config` alone.
+- **Real data is the user's.** If a run wrote to Tarn's real folders, stop and put what it wrote in your report. The files stay where they are until the user decides.
 - **Build with the `tdd` skill.** Call the Skill tool with `tdd` and work red-green: each behavior starts as a test you saw fail.
 - **Run the app only as the verification doc says** (`CLAUDE.md` names it). The desktop is shared with the user, and a launch outside that recipe lands on their screen.
 - **Commit through the hooks.**

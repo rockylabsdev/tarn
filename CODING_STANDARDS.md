@@ -6,6 +6,8 @@ Read at review. Each rule here is a judgment call; rules a script can decide are
 
 The review takes these as given, and flags only a change that weakens one:
 
+- **American spelling** (`scripts/text-lint.sh`), in code, UI, docs and names stored on disk: `color`, `center`, `gray`, `behavior`, `canceled`. A reader of an older saved name lives in one place per file format, and that file is exempt. Third-party text stays verbatim.
+- **Text a public repo shouldn't hold** (`scripts/text-lint.sh`): paths into the home folder of the machine running the check, personal email addresses, and other products' names outside `docs/planning/`.
 - **QML raw values** (`scripts/qml-lint.sh`): sizes, spacing, radii, colors and durations come from `src/ui/qml/Style.qml`. Existing files are held at their count in `scripts/qml-raw-values.baseline`. **A diff that raises a line in that file is a finding**: the new value belongs in Style.
 - **Slow programs run async:** tesseract, ffmpeg, ffprobe, gifski, gpu-screen-recorder and `nice` go through `ProcessRunner::runAsync`.
 - **Tests use the daemon's clock**, `env->now()`, never the real one.
@@ -41,10 +43,6 @@ Flag a new function whose job an existing one already does, or two hunks in the 
 Names in code, tests, commit messages and UI text use `GLOSSARY.md`'s terms, and avoid its _Avoid_ words: a Thumbnail is not a "popup", an Annotation is not a "shape", a Selection is not a "region". Read the glossary, then check every name the diff adds, and every new UI string, against it. Flag a new name for a concept the glossary already names.
 
 No script can do this: an _Avoid_ word is banned only for the concept its entry names. "Crop", "Restore" and "Trim" are terms of their own, yet each is on another term's _Avoid_ list.
-
-## Spelling
-
-American spelling everywhere, in code, UI and docs: `color`, `center`, `gray`, `behavior`, `canceled`. A name stored on disk is spelled the same way; a reader of an older name lives in one place per file format.
 
 ## Motion
 

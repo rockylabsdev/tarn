@@ -1,6 +1,6 @@
 # Verifying Tarn: build, check, run off-screen
 
-The desktop is shared with the user. An agent never opens a Tarn window, never runs the real `grim`, `wl-copy` or `hyprctl`, and never touches `~/.config/hypr`, the real clipboard, `~/Pictures`, `~/Videos` or the real `$XDG_RUNTIME_DIR/tarn` socket. Everything below keeps to that.
+The desktop is shared with the user. An agent never opens a Tarn window, never runs the real `grim`, `wl-copy` or `hyprctl`, and never touches `~/.config/hypr`, the real clipboard, `~/Pictures`, `~/Videos` or the real `$XDG_RUNTIME_DIR/tarn` socket. Tarn's real folders (`tarn` under `~/.config`, `~/.local/share`, `~/.local/state` and `~/.cache`) are the user's data: if a run wrote there, stop and report what it wrote, and leave the files for the user to decide on. Everything below keeps to that.
 
 ## 1. The check (always)
 
@@ -8,9 +8,9 @@ The desktop is shared with the user. An agent never opens a Tarn window, never r
 scripts/check.sh
 ```
 
-Runs a few source checks first (QML raw values and `WheelHandler` devices, wheel events in tests, slow programs run async, tests on the daemon's clock: `CODING_STANDARDS.md` lists them), then configures (CMake + Ninja into `build/`), builds, and runs every test with CTest. Exits non-zero on any failure, and prints failing test output. The git hooks in `.githooks/` run the same script before a commit, before a conflict-free merge, and before a push (pre-push skips commits whose files already passed), so a failing commit is never recorded or pushed. CI runs it again on every PR and every push to main (`.github/workflows/check.yml`).
+Runs a few source checks first (American spelling and text a public repo shouldn't hold, QML raw values and `WheelHandler` devices, wheel events in tests, slow programs run async, tests on the daemon's clock: `CODING_STANDARDS.md` lists them), then configures (CMake + Ninja into `build/`), builds, and runs every test with CTest. Exits non-zero on any failure, and prints failing test output. The git hooks in `.githooks/` run the same script before a commit, before a conflict-free merge, and before a push (pre-push skips commits whose files already passed), so a failing commit is never recorded or pushed. CI runs it again on every PR and every push to main (`.github/workflows/check.yml`).
 
-It keeps a list of file sets (git trees) that passed. If the files on disk are already in that list, or differ from a HEAD that passed only in Markdown, `docs/` or `.claude/`, it stops at once. So the commit hook after a check by hand costs nothing; just commit. It runs itself at low CPU and disk priority, and tests see only the fonts CI has (Noto), so a picture drawn in a font only the desktop has fails here as it would on GitHub.
+It keeps a list of file sets (git trees) that passed. If the files on disk are already in that list, or differ from a HEAD that passed only in Markdown, `docs/` or `.claude/`, it stops at once; a docs-only change still gets the spelling and text checks. So the commit hook after a check by hand costs nothing; just commit. It runs itself at low CPU and disk priority, and tests see only the fonts CI has (Noto), so a picture drawn in a font only the desktop has fails here as it would on GitHub.
 
 `BUILD_DIR=build-foo scripts/check.sh` uses another build folder. Run one area with `scripts/check.sh --only fullscreen` (a ctest regex). It builds first, so the test binaries are never stale, and gives the tests the same fonts and low priority as the full check. It never counts as a pass. Other builds or tests you run by hand go under `nice -n 15`.
 

@@ -9,6 +9,7 @@ You are merging `{implementer branch}` ({ticket title}, {ticket pointer}) into t
 ## Rules
 
 - **Plain commands.** Write and edit files with Write and Edit, scripts included (write `/tmp/<name>.py` with Write, then run `python3 -I /tmp/<name>.py`). Each Bash call is one plain command, run from the worktree root. Your shell refuses any call it can't prove stays inside the worktree: heredocs, loops, `&&` chains, pipes into files, `cd`, `$(…)`. Split a refused call into plain commands.
+- **Run the check bare.** `scripts/check.sh --only trim` lowers its own priority, and takes a plain area name. The shell refuses `nice` in front of a quoted `^trim$`.
 - **Waiting.** Run long commands in the foreground with a long timeout. The harness blocks `sleep`.
 - **Git config is already set.** The hooks are on for every worktree. Leave `git config` alone.
 - **Merge, then let the checks judge it.** Run `git merge --no-ff {implementer branch}`. The merge hook runs the repo's full checks: two branches that each pass can still break together.
