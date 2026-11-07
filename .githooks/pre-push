@@ -1,0 +1,25 @@
+#!/bin/sh
+# Refuses to push a commit whose files have not passed scripts/check.sh.
+# A commit passes if its tree is in the list check.sh keeps; otherwise, when the
+# commit is the one checked out with nothing changed, the check runs now.
+set -eu
+
+passed="$(git rev-parse --git-common-dir)/tarn-checked-trees"
+zero=0000000000000000000000000000000000000000
+
+while read -r _local_ref sha _remote_ref _remote_sha; do
+    [ "$sha" = "$zero" ] && continue          # deleting a remote branch
+    tree=$(git rev-parse "$sha^{tree}")
+    [ -f "$passed" ] && grep -qx "$tree" "$passed" && continue
+
+    if [ "$sha" = "$(git rev-parse HEAD)" ] && [ -z "$(git status --porcelain --untracked-files=all)" ]; then
+        echo "pre-push: $(git rev-parse --short "$sha") has not passed the check yet; running scripts/check.sh" >&2
+        "$(git rev-parse --show-toplevel)/scripts/check.sh" </dev/null || {
+            echo "pre-push: the check failed, so nothing was pushed." >&2
+            exit 1
+        }
+    else
+        echo "pre-push: $(git rev-parse --short "$sha") has not passed scripts/check.sh. Check it out with no local changes and push again (the hook runs the check)." >&2
+        exit 1
+    fi
+done

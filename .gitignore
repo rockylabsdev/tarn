@@ -1,0 +1,9 @@
+/build/
+/build-*/
+.cache/
+compile_commands.json
+/.ccache/
+/packaging/src/
+/packaging/pkg/
+/packaging/*.pkg.tar.*
+/packaging/*.tar.gz

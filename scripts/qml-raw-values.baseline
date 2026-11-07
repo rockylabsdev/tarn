@@ -1,0 +1,30 @@
+# Lines with raw design values each QML file may hold (scripts/qml-lint.sh). Counts only go down,
+# through `scripts/qml-lint.sh --tighten`.
+# Set when the check arrived (2026-11-04) from main and the v2 build branch.
+19 src/ui/qml/ColorButton.qml
+8 src/ui/qml/ColorSlider.qml
+6 src/ui/qml/CropControls.qml
+1 src/ui/qml/CropOverlay.qml
+9 src/ui/qml/Editor.qml
+13 src/ui/qml/EmojiButton.qml
+130 src/ui/qml/FramePanel.qml
+6 src/ui/qml/HistoryMenu.qml
+22 src/ui/qml/History.qml
+15 src/ui/qml/Magnifier.qml
+11 src/ui/qml/MenuPill.qml
+1 src/ui/qml/ModeBar.qml
+15 src/ui/qml/Overlay.qml
+7 src/ui/qml/PinMenu.qml
+9 src/ui/qml/Pin.qml
+13 src/ui/qml/Recording.qml
+33 src/ui/qml/RecordPanel.qml
+2 src/ui/qml/Ripples.qml
+1 src/ui/qml/Rounded.qml
+9 src/ui/qml/SavedRow.qml
+1 src/ui/qml/TextBtn.qml
+2 src/ui/qml/TextEditor.qml
+10 src/ui/qml/ThumbnailButton.qml
+13 src/ui/qml/ThumbnailCard.qml
+7 src/ui/qml/ThumbnailMenu.qml
+1 src/ui/qml/Tip.qml
+33 src/ui/qml/Trim.qml

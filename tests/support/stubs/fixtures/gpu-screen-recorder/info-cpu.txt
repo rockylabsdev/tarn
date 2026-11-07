@@ -1,0 +1,16 @@
+section=system_info
+display_server|wayland
+section=gpu_info
+vendor|amd
+card_path|/dev/dri/card1
+section=video_codecs
+h264_software
+section=image_formats
+jpeg
+png
+section=containers
+mp4
+mkv
+section=capture_options
+screen
+portal

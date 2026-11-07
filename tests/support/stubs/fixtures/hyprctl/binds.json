@@ -1,0 +1,21 @@
+[
+{
+    "locked": false,
+    "mouse": false,
+    "release": false,
+    "repeat": false,
+    "longPress": false,
+    "non_consuming": false,
+    "auto_consuming": false,
+    "has_description": true,
+    "modmask": 64,
+    "submap": "",
+    "submap_universal": "false",
+    "key": "F9",
+    "keycode": 0,
+    "catch_all": false,
+    "description": "Tarn: full-screen shot",
+    "allow_input_capture": false,
+    "dispatcher": "HL.Dispatcher(exec_cmd)",
+    "arg": "6"
+}]

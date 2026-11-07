@@ -1,0 +1,5 @@
+configure_file(version.h.in ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h @ONLY)
+qt_add_executable(tarn main.cpp doctor.cpp)
+target_include_directories(tarn PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+target_link_libraries(tarn PRIVATE tarn_core tarn_ui)
+install(TARGETS tarn RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

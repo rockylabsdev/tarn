@@ -1,0 +1,7 @@
+#!/bin/sh
+# Fake nice: logs its arguments, then runs the command it was given (also from
+# the stubs), so tests can see that a job ran under nice.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+[ "$1" = -n ] && shift 2
+exec "$@"

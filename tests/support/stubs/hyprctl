@@ -1,0 +1,52 @@
+#!/bin/sh
+# Fake hyprctl: answers read-only queries from fixtures; anything else (eval, ...)
+# is only logged, so no test can change a real desktop.
+#
+# It rejects the forms that silently do nothing on the user's Lua-config Hyprland
+# (docs/hyprland.md), so a test fails where the desktop would:
+#   - `dispatch <name> <args>`, the pre-Lua form (it no longer parses), and
+#     `keyword ...`, which belongs to Hyprland's legacy config. Runtime changes go
+#     through `eval '<lua>'`, e.g. hl.dispatch(hl.dsp.cursor.move({x=1,y=2})).
+#   - a rule whose namespace/title pattern is not anchored at both ends: Hyprland
+#     matches the WHOLE name, so "^tarn" alone matches nothing.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+
+reject() {
+    echo "hyprctl (test stub): $1" >&2
+    exit 1
+}
+
+case "$1" in
+    keyword)
+        reject "'keyword' is the legacy-config path; Tarn changes Hyprland only through: hyprctl eval '<lua>'" ;;
+    dispatch)
+        case "$2" in
+            hl.*) ;;
+            *) reject "'dispatch $2 ...' is the pre-Lua form and no longer parses; use: hyprctl eval 'hl.dispatch(hl.dsp....)'" ;;
+        esac ;;
+    eval)
+        # Every `namespace = "..."` / `title = "..."` pattern must start with ^ and end with $.
+        q="[\"']"
+        any_rule="(namespace|title)[[:space:]]*=[[:space:]]*$q[^\"']*$q"
+        anchored="=[[:space:]]*$q\\^.*[$]$q\$"
+        bad=$(printf '%s\n' "$2" | grep -oE "$any_rule" | grep -vE "$anchored" || true)
+        [ -z "$bad" ] || reject "rule pattern not anchored with ^...\$ (Hyprland matches the whole name): $bad" ;;
+esac
+
+# Mode "hang_queries": `monitors -j` (is Hyprland up) answers, every other call never
+# does and ignores SIGTERM, like a compositor that stalls after the first question.
+if [ "$(stub_mode)" = hang_queries ] && [ "$*" != "monitors -j" ]; then
+    trap '' TERM INT
+    while :; do sleep 1; done
+fi
+
+case "$*" in
+    "cursorpos -j") cat "$(stub_fixture cursorpos.json)" ;;
+    "monitors -j") cat "$(stub_fixture monitors.json)" ;;
+    "binds -j") cat "$(stub_fixture binds.json)" ;;
+    "clients -j") cat "$(stub_fixture clients.json)" ;;
+    "activewindow -j") cat "$(stub_fixture activewindow.json)" ;;
+    "getoption cursor:no_hardware_cursors -j") cat "$(stub_fixture no_hardware_cursors.json)" ;;
+    "getoption decoration:rounding -j") cat "$(stub_fixture rounding.json)" ;;
+esac

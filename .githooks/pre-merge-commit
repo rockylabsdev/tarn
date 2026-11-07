@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs the full check before git records a merge that had no conflicts. Such a
+# merge never runs pre-commit: two branches that each pass can still break together.
+# The check of the checkout being committed in (a worktree too), found through git, not
+# beside this hook file: core.hooksPath can point every worktree at one checkout's hooks.
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

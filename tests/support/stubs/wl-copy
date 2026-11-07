@@ -1,0 +1,5 @@
+#!/bin/sh
+# Fake wl-copy: records the call and keeps what was piped in as the "clipboard".
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+stub_save_stdin

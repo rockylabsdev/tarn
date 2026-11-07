@@ -1,0 +1,23 @@
+# Real tools the stubs and the daemon may use. Everything else (grim, wl-copy,
+# hyprctl, ...) must come from tests/support/stubs, or it is simply not found.
+sh
+cat
+cp
+mv
+rm
+mkdir
+date
+env
+sleep
+stdbuf
+printf
+head
+tail
+dirname
+basename
+true
+false
+base64
+wc
+ffmpeg
+ffprobe

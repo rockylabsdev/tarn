@@ -1,0 +1,40 @@
+# The same check as the git hooks (scripts/check.sh), run where no one can skip it.
+# Arch Linux, like the CachyOS desktop Tarn targets, so package names match.
+name: check
+
+on:
+  push:
+    branches: [main]   # other branches are checked through their PR
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    env:
+      LANG: en_US.UTF-8   # the desktop's locale: wallpaper names sort in natural order
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 1G
+    steps:
+      # Build dependencies, plus what tests use from the system: the real programs in
+      # tests/support/safe-tools.txt (coreutils and bash come with the image; ffmpeg
+      # does not), and the desktop's default font, Noto Sans, which Counter reference
+      # images are drawn in.
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git cmake ninja pkgconf \
+            qt6-base qt6-declarative qt6-svg layer-shell-qt tomlplusplus \
+            wayland wayland-protocols ffmpeg noto-fonts ccache
+      - uses: actions/checkout@v4
+      # Compiled files from earlier runs: a run then recompiles only what changed.
+      # Each run saves a new cache under its commit and starts from the newest one.
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ github.sha }}
+          restore-keys: ccache-
+      - name: Check
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          scripts/check.sh

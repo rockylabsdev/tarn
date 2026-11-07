@@ -1,0 +1,1 @@
+tarn_add_test(edit_from_history_ui LIBS tarn_ui)

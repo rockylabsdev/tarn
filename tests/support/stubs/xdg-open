@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fake xdg-open: only records the call.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"

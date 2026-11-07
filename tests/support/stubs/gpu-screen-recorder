@@ -1,0 +1,56 @@
+#!/bin/sh
+# Fake gpu-screen-recorder: like the real one it needs a moment to start, then
+# creates the file named by -o (a tiny real MP4, fixtures/gpu-screen-recorder/sample.mp4)
+# and runs until it gets SIGINT, when it exits 0. It never records anything.
+#
+# Steer it from a test:
+#   fixture start_delay   seconds before the file appears (default 0.3; the real one needs ~0.45)
+#   mode "die"            exits 1 right away, writing nothing (a recorder that cannot start)
+#   mode "silent"         runs but never writes the file
+# Signals it receives (INT excepted) are appended to $TARN_STUB_STATE/signals/gpu-screen-recorder.log
+# as INT / USR1 / USR2, for the pause tickets.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+
+# --info, the encoder probe (tarn doctor). Modes: "cpu" lists only h264_software,
+# "hang" never answers and ignores SIGTERM, as the real one does while a portal request
+# is unanswered; "portal" is what the real one does when asked by a program: the list is
+# ready at once, but it sits in stdio's buffer unless stdbuf made stdout line buffered, and
+# then the portal hangs as in "hang"; any other mode lists hardware h264 too.
+if [ "${1:-}" = --info ]; then
+    case "$(stub_mode)" in
+        hang) trap '' TERM INT; while :; do sleep 1; done ;;
+        portal)
+            [ -n "${_STDBUF_O:-}" ] && cat "$(stub_fixture info-hardware.txt)"
+            trap '' TERM INT; while :; do sleep 1; done ;;
+        cpu) cat "$(stub_fixture info-cpu.txt)" ;;
+        *) cat "$(stub_fixture info-hardware.txt)" ;;
+    esac
+    exit 0
+fi
+
+out=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -o) out=$2; shift ;;
+    esac
+    shift
+done
+
+mode=$(stub_mode)
+[ "$mode" = die ] && { echo "gpu-screen-recorder: stub told to die" >&2; exit 1; }
+
+mkdir -p "$TARN_STUB_STATE/signals"
+sig_log="$TARN_STUB_STATE/signals/$STUB_NAME.log"
+trap 'echo INT >> "$sig_log"; exit 0' INT
+trap 'echo USR1 >> "$sig_log"' USR1
+trap 'echo USR2 >> "$sig_log"' USR2
+trap 'exit 0' TERM
+
+delay=0.3
+[ -r "$(stub_fixture start_delay)" ] && delay=$(cat "$(stub_fixture start_delay)")
+sleep "$delay"
+if [ "$mode" != silent ] && [ -n "$out" ]; then
+    cp "$(stub_fixture sample.mp4)" "$out"
+fi
+while :; do sleep 0.02; done

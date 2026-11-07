@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs the full check before every commit. Enable once per clone (worktrees share it):
+#   git config core.hooksPath .githooks
+# The check of the checkout being committed in (a worktree too), found through git, not
+# beside this hook file: core.hooksPath can point every worktree at one checkout's hooks.
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

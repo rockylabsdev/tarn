@@ -1,0 +1,12 @@
+#!/bin/sh
+# Fake ZXingReader: logs its arguments and prints fixtures/ZXingReader/codes.txt
+# (the contents of the codes it "found", one per line; empty by default = no
+# code in the picture). The picture's path is the last argument; the stub keeps
+# a copy of it as call n's stdin file so tests can check what was read.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+for _last; do :; done
+mkdir -p "$TARN_STUB_STATE/stdin"
+_n=$(wc -l < "$TARN_STUB_STATE/calls/$STUB_NAME.log")
+cp "$_last" "$TARN_STUB_STATE/stdin/$STUB_NAME.$_n"
+cat "$(stub_fixture codes.txt)"

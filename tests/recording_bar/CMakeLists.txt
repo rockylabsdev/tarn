@@ -1,0 +1,1 @@
+tarn_add_test(recording_bar)

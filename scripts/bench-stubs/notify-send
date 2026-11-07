@@ -1,0 +1,4 @@
+#!/bin/sh
+# The bench has a private D-Bus session and no notification daemon: record the call
+# instead of waiting for a service that is not there.
+printf '%s\n' "$*" >> "$BENCH/notify.log"

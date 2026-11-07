@@ -1,0 +1,10 @@
+#!/bin/sh
+# Fake grim: writes fixtures/grim/output.png to stdout, or to the file named last.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+for last; do :; done
+if [ "$last" = "-" ]; then
+    cat "$(stub_fixture output.png)"
+else
+    cp "$(stub_fixture output.png)" "$last"
+fi

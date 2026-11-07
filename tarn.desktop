@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tarn
+GenericName=Capture history
+Comment=Open the history of your screenshots and recordings
+Exec=tarn history
+Icon=camera-photo
+Terminal=false
+Categories=Utility;Graphics;
+Keywords=screenshot;screen recording;capture;

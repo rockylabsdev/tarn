@@ -1,0 +1,25 @@
+#!/bin/sh
+# The bench's stand-in for gpu-screen-recorder, which cannot see a nested output (it
+# lists the host's real DRM connectors, so it could record the user's real screen).
+# Logs its arguments to $BENCH/gsr.log, writes a tiny real MP4 to its -o path after
+# 0.3 s, and runs until SIGINT, like the real one. `--info` answers the way a machine
+# with a hardware encoder does, so `tarn doctor` has something to read.
+if [ "${1:-}" = "--info" ]; then
+    printf 'section=video_codecs\nh264\nh264_software\n'
+    exit 0
+fi
+printf '%s\n' "$*" >> "$BENCH/gsr.log"
+out=
+while [ $# -gt 0 ]; do
+    if [ "$1" = "-o" ]; then
+        out=$2
+        shift
+    fi
+    shift
+done
+sleep 0.3
+[ -n "$out" ] && cp "$BENCH/sample.mp4" "$out"
+trap 'exit 0' INT TERM
+while :; do
+    sleep 0.2
+done

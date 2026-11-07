@@ -1,0 +1,31 @@
+#!/bin/sh
+# Fake tesseract: keeps the picture it was given on stdin and prints
+# fixtures/tesseract/output.txt (or nothing, in "empty" mode; "slow" mode
+# waits a second first, to show the daemon is not blocked meanwhile).
+# Asked for `tsv` (Lines and Table ask for `--psm 6 tsv`), it prints
+# fixtures/tesseract/tsv.txt instead: canned word boxes. The folder also holds
+# tsv-table.txt (a web table, the default), tsv-ls.txt (`ls -l`) and
+# tsv-prose.txt (prose that must fall back to Lines), and two read by the real
+# Tesseract 5.5 from rendered pictures: tsv-code.txt (src/core/clipboard/
+# clipboard.cpp lines 19-31 in DejaVu Sans Mono 15 px, light on dark) and
+# tsv-prose-sans.txt (two paragraphs in DejaVu Sans 15 px); a test copies one
+# over tsv.txt with setFixture.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+# `tesseract --list-langs` (tarn doctor): fixtures/tesseract/langs.txt.
+# Mode "hang" never answers it and ignores SIGTERM.
+if [ "${1:-}" = --list-langs ]; then
+    [ "$(stub_mode)" = hang ] && { trap '' TERM INT; while :; do sleep 1; done; }
+    cat "$(stub_fixture langs.txt)"
+    exit 0
+fi
+stub_save_stdin
+[ "$(stub_mode)" = slow ] && sleep 1
+[ "$(stub_mode)" = empty ] && exit 0
+for arg in "$@"; do
+    if [ "$arg" = tsv ]; then
+        cat "$(stub_fixture tsv.txt)"
+        exit 0
+    fi
+done
+cat "$(stub_fixture output.txt)"

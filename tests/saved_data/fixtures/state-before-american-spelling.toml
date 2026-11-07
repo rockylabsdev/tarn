@@ -1,0 +1,10 @@
+# Written by Tarn. Safe to delete; Tarn starts fresh. Your Settings are in config.toml.
+
+[colours]
+saved = "#ff2d6cdf,#80ff0000"
+
+[size]
+line = 3
+
+[tool]
+colour = "#ffe53935"

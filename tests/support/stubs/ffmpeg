@@ -1,0 +1,55 @@
+#!/bin/sh
+# Stand-in for ffmpeg. By default it logs the call and then runs the REAL ffmpeg
+# with the same arguments (a tiny fixture video costs milliseconds, and it is the
+# honest way to prove a cut is frame-exact). Steer it from a test:
+#   mode "fake"    for a Trim (a call with -progress) run no encoder: print the `out_time_us=` values listed one per
+#                  line in fixture progress_us (default 1000000 2000000), `step_delay`
+#                  seconds apart (fixture, default 0.05), then copy the -i file to the
+#                  last argument and print progress=end. A trim of Tarn's copy can
+#                  then be watched and canceled while it is "running".
+#   fixture poster_delay   seconds a frame/poster call (not a Trim) waits before it runs, to show
+#                  the daemon is not blocked while it works
+#   mode "fail"    exits 1 (from stub_begin), for every call
+#   mode "error"   like ok, but ffmpeg is told to fail: prints a line on stderr, exits 1
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+
+mode=$(stub_mode)
+
+# Only a Trim (it asks for `-progress`) is faked or failed; frames and posters stay real.
+trim=no
+for arg in "$@"; do [ "$arg" = -progress ] && trim=yes; done
+[ "$trim" = no ] && mode=ok
+
+if [ "$mode" = fake ]; then
+    in=; out=
+    prev=
+    for arg in "$@"; do
+        [ "$prev" = -i ] && in=$arg
+        prev=$arg
+        out=$arg
+    done
+    delay=0.05
+    [ -r "$(stub_fixture step_delay)" ] && delay=$(cat "$(stub_fixture step_delay)")
+    values="1000000 2000000"
+    [ -r "$(stub_fixture progress_us)" ] && values=$(cat "$(stub_fixture progress_us)")
+    for v in $values; do
+        sleep "$delay"
+        printf 'out_time_us=%s\nprogress=continue\n' "$v"
+    done
+    sleep "$delay"
+    cp "$in" "$out" || exit 1
+    printf 'progress=end\n'
+    exit 0
+fi
+
+if [ "$mode" = error ]; then
+    echo "Error: the stub was told to fail the encode" >&2
+    exit 1
+fi
+
+[ "$trim" = no ] && [ -r "$(stub_fixture poster_delay)" ] && sleep "$(cat "$(stub_fixture poster_delay)")"
+
+# The real one: this folder is the first entry of PATH, so drop it and run the next ffmpeg.
+PATH=${PATH#"$STUB_HOME":}
+exec ffmpeg "$@"

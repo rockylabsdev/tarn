@@ -1,0 +1,21 @@
+[preset.Plain]
+padding = 0.08
+inset = 0.0
+auto_balance = false
+shadow = 0.05
+corners = 0.03
+align_h = 0
+align_v = 0
+ratio = "Auto"
+
+[preset.Plain.background]
+kind = "plain"
+colour = "#ff112233"
+
+[preset.Stops]
+padding = 0.1
+
+[preset.Stops.background]
+kind = "gradient"
+angle = 90.0
+stops = [{ colour = "#ffff0000", pos = 0.0 }, { colour = "#ff0000ff", pos = 0.25 }]

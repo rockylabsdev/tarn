@@ -1,0 +1,3 @@
+List of available languages in "/usr/share/tessdata/" (2):
+eng
+osd

@@ -1,0 +1,42 @@
+#!/bin/sh
+# Fake gifski: reads the y4m stream on stdin (kept for the test: stdin/gifski.<n>),
+# prints gifski's progress the way the real one does ("\rFrame 3 / 20 ####" with
+# carriage returns, on stderr) and writes a tiny real GIF to the -o path.
+#
+# Steer it from a test:
+#   fixture frames        how many "Frame i / N" reports (default 5)
+#   fixture frame_delay   seconds between reports (default 0.02)
+#   mode "die"            prints an error, exits 1, writes nothing
+#   mode "fail"           (generic) logs the call and exits 1 at once
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+
+out=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -o|--output) out=$2; shift ;;
+    esac
+    shift
+done
+
+stub_save_stdin
+
+mode=$(stub_mode)
+if [ "$mode" = die ]; then
+    printf 'error: stub told to die\n' >&2
+    exit 1
+fi
+
+frames=5
+[ -r "$(stub_fixture frames)" ] && frames=$(cat "$(stub_fixture frames)")
+delay=0.02
+[ -r "$(stub_fixture frame_delay)" ] && delay=$(cat "$(stub_fixture frame_delay)")
+
+i=1
+while [ "$i" -le "$frames" ]; do
+    printf '\rFrame %s / %s ____________' "$i" "$frames" >&2
+    sleep "$delay"
+    i=$((i + 1))
+done
+[ -n "$out" ] && cp "$(stub_fixture sample.gif)" "$out"
+printf '\rgifski created %s\n' "$out" >&2

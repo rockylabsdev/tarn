@@ -1,0 +1,53 @@
+# Maintainer: Jamey Smith <https://github.com/rockylabsdev/tarn/issues>
+
+pkgname=tarn
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Screenshot and screen-recording tool for Hyprland'
+arch=(x86_64)
+url='https://github.com/rockylabsdev/tarn'
+license=(MIT)
+depends=(
+  glibc
+  libgcc
+  libstdc++
+  wayland
+  qt6-base
+  qt6-declarative
+  qt6-svg
+  layer-shell-qt
+  tomlplusplus
+  grim
+  libnotify
+  gpu-screen-recorder # its package gives gsr-kms-server cap_sys_admin; Tarn sets no capability
+  ffmpeg
+  gifski
+  tesseract
+  tesseract-data-eng
+)
+makedepends=(
+  cmake
+  ninja
+  wayland-protocols
+)
+optdepends=(
+  'zxing-cpp: read QR codes in Text capture'
+  'socat: the Waybar example talks to the Shell socket'
+  'jq: the Waybar example reads the Shell socket replies'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP') # the real sum is set when the tag is cut
+
+build() {
+  cmake -S "$pkgname-$pkgver" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgname-$pkgver/THIRD-PARTY.md" \
+    -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Fake tarn-clip (the detached clipboard helper): only records the call.
+. "$(dirname "$0")/_lib.sh"
+stub_begin "$@"
+# Text capture (--text FILE): keep what the file held, as the clipboard text.
+if [ "$1" = "--text" ]; then
+    mkdir -p "$TARN_STUB_STATE/stdin"
+    cp "$2" "$TARN_STUB_STATE/stdin/$STUB_NAME.$(wc -l < "$TARN_STUB_STATE/calls/$STUB_NAME.log")"
+fi

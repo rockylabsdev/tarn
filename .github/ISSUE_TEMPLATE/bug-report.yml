@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in Tarn doesn't work as it should.
+labels: ["needs-triage"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `tarn doctor`
+      description: Run `tarn doctor` in a terminal and paste everything it prints.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `tarn --version`
+      placeholder: tarn 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: hyprland
+    attributes:
+      label: Hyprland version
+      description: From `hyprctl version`.
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU
+      description: For example "AMD Radeon 610M" or "NVIDIA RTX 4090".
+    validations:
+      required: true

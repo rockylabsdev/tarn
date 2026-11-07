@@ -1,0 +1,10 @@
+# The Editor and its drawing tests
+
+Read when working on the Capture document, a drawing tool, the Editor session, selecting, Handles or undo.
+
+- The **Capture document** (`src/core/document`: `CaptureDocument`, `Annotation`) holds the shot and its Annotations and flattens to an image. One drawing path: `CaptureDocument::paint(QPainter&)` is what both the Editor canvas (`DocumentCanvas`, `src/ui`) and the export call.
+- **A new drawing tool is one file** in `src/core/annotations/` (copy `rectangle.cpp`): an `Annotation` subclass plus a `RegisterAnnotationKind`. The tool capsule button and the tool key come from the registry. Nothing else to edit.
+- The **Editor service** (`src/core/editor`, `daemon.service<Editor>()`) opens an `EditorSession` per Thumbnail (`editor.open(id)`, or `stack.edit(id)` as a click does). Tests call the session as the QML does: `pointerPressed/Moved/Released(x, y)` in shot pixels, `done()`, `cancel()`, `copyAndClose()`, `copyKeepOpen()`, `saveAndClose()`, `saveAs(path)`, zoom and pan.
+- **Reference images:** `tests/editor/reference/*.png`, compared pixel for pixel (tolerance 0; the test shot and shapes sit on whole pixels). After an intended change to drawing, regenerate them (verify.md section 2, "Reference images").
+- `tests/editor_ui` drives the real QML window off-screen (`EditorWindows::viewFor(id)`, `QTest` mouse and key events); it includes a check that the canvas paints what the export writes.
+- **Selecting, editing and undo:** `tests/selection` (own area, references in `tests/selection/reference/`) drives `EditorSession` like the canvas does (`pointerPressed/Moved/Released`, `pointerHovered`, `nudge`, `undo`, `chrome()` for the Handles and ghost) and exports with `document().flatten()`. Test-only Annotation kinds there (a line with end Handles, a label with outline only) show how a tool opts into a Handle look. Undo lives in `CaptureDocument::history()` (`UndoHistory`): any change that is already applied records `history().record(text, undo, redo)`; Crop and Frame do exactly that.
