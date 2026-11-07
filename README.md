@@ -41,12 +41,14 @@ Tarn is built for [Hyprland](https://hypr.land) on Arch-family Linux (developed 
 
 ## Install
 
-### From the AUR
+### On Arch or CachyOS
 
-The [AUR](https://wiki.archlinux.org/title/Arch_User_Repository) is Arch's collection of community build recipes. An AUR helper such as `paru` or `yay` downloads Tarn's recipe, builds it on your machine and installs it with pacman:
+Tarn isn't on the [AUR](https://wiki.archlinux.org/title/Arch_User_Repository) yet: new account registration there is paused for now. Until it's up, the same recipe is in this repo. `makepkg` downloads the release, builds it on your machine, and installs it as a normal pacman package:
 
 ```sh
-paru -S tarn
+git clone https://github.com/rockylabsdev/tarn
+cd tarn/packaging
+makepkg -si
 ```
 
 That pulls in what Tarn needs to run: Qt 6, `grim` (takes the screenshots), `gpu-screen-recorder` (records), `ffmpeg` and `gifski` (make GIFs and trim) and `tesseract` (reads text). `zxing-cpp` (reads QR codes), `socat` and `jq` (for the Waybar example below) are optional; pacman lists them after the install.
