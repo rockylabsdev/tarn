@@ -31,3 +31,11 @@ Full screen / Overlay capture, real speed / 4× slower, and "Every 2.5 s" repeat
 
 `./shoot.sh [folder]` renders every variant frame by frame off screen (116 ms gap)
 into `sheet.png`. `shots/sheet.png` is the one committed.
+
+## Verdict (2026-11-10)
+
+The user ran it on the real monitor and picked **B with the 35 ms gap**: every older
+Thumbnail springs back in from the left edge together, with Tarn's own enter spring,
+and the new one springs in with them. It "felt smooth and responsive". The 35 ms gap
+is the uncompressed-shot path (grim `-t ppm`, the Thumbnails back at once, the PNG
+made off the daemon's main thread), so that is the path the build needs.
