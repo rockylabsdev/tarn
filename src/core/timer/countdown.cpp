@@ -27,6 +27,7 @@ int Countdown::seconds() const {
 void Countdown::start(const QString &monitorName, const QRect &monitorRect, const QRect &area, bool framed) {
     if (m_active)
         return;
+    m_hide = m_daemon.service<ThumbnailStack>().hideForCapture(); // taken before the Overlay lets go of its own
     m_framed = framed;
     m_monitorName = monitorName;
     m_monitorRect = monitorRect;
@@ -54,6 +55,7 @@ bool Countdown::cancel() {
     if (!m_active)
         return false;
     stop();
+    m_hide.reset(); // no shot: the Thumbnails come back as they were
     return true;
 }
 
@@ -69,7 +71,8 @@ void Countdown::stop() {
 void Countdown::tick() {
     if (!m_active)
         return;
-    if (m_daemon.now() >= m_deadline) {
+    // A shot already being taken (a key pressed meanwhile) goes first; the next tick shoots.
+    if (m_daemon.now() >= m_deadline && !m_daemon.service<ScreenGrabber>().busy()) {
         shoot();
         return;
     }
@@ -102,11 +105,12 @@ void Countdown::shoot() {
     const QString name = m_monitorName;
     const QRect monitorRect = m_monitorRect, area = m_area;
     const bool framed = m_framed;
+    const CaptureHide hide = std::move(m_hide); // released once the shot is on the stack, or failed
     stop();
     waitUntilOffScreen();
     const QDateTime captureTime = m_daemon.now();
     QString error;
-    const QImage image = QImage::fromData(m_daemon.service<ScreenGrabber>().grabMonitor(name, &error), "PNG");
+    const QImage image = m_daemon.service<ScreenGrabber>().grabMonitor(name, &error);
     if (image.isNull()) {
         if (error.isEmpty())
             error = QStringLiteral("the screenshot could not be read");

@@ -114,6 +114,17 @@ Item {
         // Hidden while editing: gone at once, no exit animation; back in its place after.
         function onHidden(id) { root.remove(id); }
         function onRevealed(id) { root.reinsert(); }
+        // Capture hide over: every card springs back in from the left edge together,
+        // at its place now (one added meanwhile included). The surface left at once.
+        function onCaptureHiddenChanged() {
+            if (thumbnails.captureHidden)
+                return;
+            for (let i = 0; i < cards.count; ++i) {
+                const card = root.items[cards.get(i).captureId];
+                if (card)
+                    card.springBack();
+            }
+        }
     }
 
     Repeater {

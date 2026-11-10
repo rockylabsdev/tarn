@@ -99,7 +99,7 @@ private slots:
             capture();
         QCOMPARE(TestEnv::readFile(env->screenshots() + "/2026-11-03_09-30-00.png"), edited);
         history().flush();
-        QCOMPARE(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-00.png"), TestEnv::defaultGrimPng()); // original untouched
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-00.png")), TestEnv::defaultGrimImage()); // original untouched
     }
 
     void aFailedAutoSaveKeepsTheOldestAndRaisesOneNotification() {
@@ -190,7 +190,7 @@ private slots:
         QCOMPARE(stack().saveAsFolder(), env->screenshots()); // nothing remembered yet
         const QString target = env->scratch() + "/elsewhere/shot.png";
         QVERIFY(stack().saveAs(id, target));
-        QCOMPARE(TestEnv::readFile(target), TestEnv::defaultGrimPng());
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(target)), TestEnv::defaultGrimImage());
         QCOMPARE(stack().count(), 0);
         QCOMPARE(stack().saveAsFolder(), env->scratch() + "/elsewhere");
     }

@@ -8,6 +8,7 @@
 #include "storage/file_name.h"
 
 #include <QDateTime>
+#include <QFuture>
 #include <QImage>
 #include <QJsonObject>
 #include <QMutex>
@@ -54,6 +55,9 @@ public:
     // returned id (the file name without extension, named by capture time) is
     // valid at once.
     QString record(const QByteArray &png, const CaptureInfo &info);
+    // The same for a PNG still being made (a full-screen shot, encodePngInBackground):
+    // the pair is written once it is ready, still in the order asked for.
+    QString record(const QFuture<QByteArray> &png, const CaptureInfo &info);
 
     // Adds a path the capture was later saved to, to its description.
     void addSavedPath(const QString &id, const QString &path);

@@ -180,6 +180,10 @@ _Avoid_: Label, note, tooltip, leader (for the whole; the leader is just its lin
 The small floating preview of a fresh capture, from which it is copied, saved, pinned or opened for editing.
 _Avoid_: Quick Access, overlay, popup, toast
 
+**Capture hide**:
+The whole Thumbnail stack off screen while Tarn takes a shot or records, so Thumbnails are never in a capture. It lasts from before the shot (or the Overlay's frozen image) until the capture is on the stack, a cancel, or the recorder's exit, and the Thumbnails then spring back in from the left edge together. Not the same as a Thumbnail hidden while its Editor is open.
+_Avoid_: Hide all, stack hidden (for the per-Thumbnail Editor hide)
+
 **Pin**:
 A capture floated above every window until the user closes it.
 _Avoid_: Float, sticker, floating screenshot

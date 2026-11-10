@@ -68,6 +68,10 @@ void History::flush() {
 }
 
 QString History::record(const QByteArray &png, const CaptureInfo &info) {
+    return record(QtFuture::makeReadyValueFuture(png), info);
+}
+
+QString History::record(const QFuture<QByteArray> &pending, const CaptureInfo &info) {
     QDir().mkpath(dir());
     const QString base = info.time.toString(QStringLiteral("yyyy-MM-dd_HH-mm-ss"));
     QString id;
@@ -96,9 +100,11 @@ QString History::record(const QByteArray &png, const CaptureInfo &info) {
 
     const QString pngFile = pngPath(id), jsonFile = descriptionPath(id);
     const QByteArray jsonBytes = QJsonDocument(description).toJson();
-    m_pool.start([this, id, description, png, pngFile, jsonFile, jsonBytes] {
+    m_pool.start([this, id, description, pending, pngFile, jsonFile, jsonBytes] {
+        // This thread may wait for the PNG; later writes queue behind it, in order.
+        const QByteArray png = QFuture<QByteArray>(pending).result();
         // The PNG goes first: a description never exists without its picture.
-        if (writeAtomically(pngFile, png) && writeAtomically(jsonFile, jsonBytes))
+        if (!png.isEmpty() && writeAtomically(pngFile, png) && writeAtomically(jsonFile, jsonBytes))
             QMetaObject::invokeMethod(this, [this, id, description] { emit entryAdded(id, description); }, Qt::QueuedConnection);
     });
     return id;

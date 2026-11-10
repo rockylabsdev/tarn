@@ -1,7 +1,8 @@
 #pragma once
 // The layer-shell surface in the bottom-left corner that shows the Thumbnail
 // stack. It never takes keyboard focus, and it is on screen only while the
-// stack is not empty. Under a non-Wayland platform (the offscreen tests) it is
+// stack is not empty and no Capture hide is on (then it goes at once, with no
+// exit motion: anything still on screen would be in the shot). Under a non-Wayland platform (the offscreen tests) it is
 // an ordinary hidden window with no layer-shell role.
 #include <QObject>
 #include <QQuickView>

@@ -435,6 +435,39 @@ private slots:
         // Oldest on top, as before.
         QVERIFY(cards(f.surface)[1]->property("captureId").toInt() == a);
     }
+
+    // Capture hide: the surface leaves in one frame (no exit motion, which would be in the
+    // shot), and on return every card springs in from the left edge together, the new one too.
+    void aCaptureHideTakesTheSurfaceDownAtOnceAndEveryCardSpringsBackFromTheEdge() {
+        Fixture f;
+        f.addShot();
+        f.addShot();
+        QVERIFY(f.exposed(2));
+        tarn::CaptureHide hide = f.stack.hideForCapture();
+        QVERIFY(!f.surface.visible());
+        f.addShot(); // taken meanwhile: it waits off screen too
+        QVERIFY(!f.surface.visible());
+        hide.reset();
+        QVERIFY(f.surface.visible());
+        QTRY_COMPARE(cards(f.surface).size(), 3);
+        for (QQuickItem *card : cards(f.surface)) {
+            QVERIFY2(card->x() <= -240.0, qPrintable(QString::number(card->x()))); // just past the left edge,
+            QCOMPARE(card->opacity(), 0.0);                                         // clear,
+        }
+        const QList<QQuickItem *> list = cards(f.surface);
+        for (int rank = 0; rank < 3; ++rank) // already at its new place
+            QCOMPARE(list[rank]->y(), list[0]->y() - rank * 162);
+        QVERIFY(f.exposed(3)); // and in, all of them, at the edge's 16 px
+        for (QQuickItem *card : cards(f.surface))
+            QCOMPARE(card->opacity(), 1.0);
+    }
+
+    void withNoCardsTheSurfaceStaysDownThroughACaptureHide() {
+        Fixture f;
+        tarn::CaptureHide hide = f.stack.hideForCapture();
+        hide.reset();
+        QVERIFY(!f.surface.visible());
+    }
 };
 
 QTEST_MAIN(SurfaceTest)

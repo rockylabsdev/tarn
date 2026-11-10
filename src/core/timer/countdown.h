@@ -6,6 +6,8 @@
 //
 // Time comes only from `Daemon::now()`, so a test moves the clock and calls
 // tick() instead of sleeping. A real QTimer calls tick() every 100 ms.
+#include "thumbnails/thumbnail_stack.h"
+
 #include <QDateTime>
 #include <QObject>
 #include <QRect>
@@ -31,7 +33,8 @@ public:
     explicit Countdown(Daemon &daemon);
 
     // Starts counting for `area` (logical px, local to the monitor). Delay 0
-    // takes the shot at once. Does nothing while a Countdown runs.
+    // takes the shot at once. Does nothing while a Countdown runs. The Thumbnails
+    // stay off screen (Capture hide) until the shot is on the stack, or a cancel.
     void start(const QString &monitorName, const QRect &monitorRect, const QRect &area, bool framed = true);
     // Super+Shift+Print again: stops with no capture. False if none was running.
     bool cancel();
@@ -75,6 +78,7 @@ private:
     QString m_monitorName;
     QRect m_monitorRect, m_area;
     bool m_framed = true; // false: B skipped the auto-applied Preset
+    CaptureHide m_hide;
 };
 
 } // namespace tarn

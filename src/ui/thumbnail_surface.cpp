@@ -65,6 +65,7 @@ ThumbnailSurface::ThumbnailSurface(ThumbnailStack &stack, Palette &palette, QObj
         connect(root, SIGNAL(inputRectChanged()), this, SLOT(updateMask()));
     }
     connect(&stack, &ThumbnailStack::monitorChanged, this, &ThumbnailSurface::follow);
+    connect(&stack, &ThumbnailStack::captureHiddenChanged, this, &ThumbnailSurface::sync);
     sync();
 }
 
@@ -90,7 +91,7 @@ void ThumbnailSurface::follow() {
 
 void ThumbnailSurface::sync() {
     QQuickItem *root = m_view.rootObject();
-    const bool wanted = root && root->property("cardCount").toInt() > 0;
+    const bool wanted = root && root->property("cardCount").toInt() > 0 && !m_stack.captureHidden();
     if (wanted && !m_view.isVisible()) {
         updateMask();
         applyScreen();

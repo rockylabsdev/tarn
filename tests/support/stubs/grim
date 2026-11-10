@@ -1,10 +1,14 @@
 #!/bin/sh
 # Fake grim: writes fixtures/grim/output.png to stdout, or to the file named last.
+# With `-t ppm` it writes fixtures/grim/output.ppm instead: the same pixels,
+# uncompressed (TestEnv::setFixture writes both when a test sets output.png).
 . "$(dirname "$0")/_lib.sh"
 stub_begin "$@"
+file=output.png
+for arg; do [ "$arg" = ppm ] && file=output.ppm; done
 for last; do :; done
 if [ "$last" = "-" ]; then
-    cat "$(stub_fixture output.png)"
+    cat "$(stub_fixture $file)"
 else
-    cp "$(stub_fixture output.png)" "$last"
+    cp "$(stub_fixture $file)" "$last"
 fi

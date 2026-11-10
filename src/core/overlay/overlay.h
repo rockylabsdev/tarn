@@ -6,6 +6,7 @@
 #include "overlay_model.h"
 #include "recording/record_options.h"
 #include "storage/file_name.h"
+#include "thumbnails/thumbnail_stack.h"
 
 #include <QDateTime>
 #include <QImage>
@@ -28,8 +29,9 @@ class Overlay : public QObject {
 public:
     explicit Overlay(Daemon &daemon);
 
-    // Print: grabs the frozen image first (the Overlay is not mapped yet), then
-    // opens. Opening while open does nothing. On failure notifies and returns the error.
+    // Print: hides the Thumbnails (Capture hide, until the Overlay closes), grabs
+    // the frozen image (the Overlay is not mapped yet), then opens. Opening while
+    // open, or while that grab runs (a second key press), does nothing. On failure notifies and returns the error.
     Reply open(OverlayModel::Mode mode, bool timer = false);
 
     OverlayModel &model() { return m_model; }
@@ -93,6 +95,9 @@ private:
     int m_generation = 0;
     bool m_hasSurface = false;
     bool m_closing = false;
+    // The Thumbnails stay off screen while the Overlay is open; a confirmed Selection hands
+    // this on (the Countdown and the Recording take their own before it is released).
+    CaptureHide m_hide;
     struct Held {
         QByteArray png;
         QDateTime captureTime;
