@@ -35,11 +35,11 @@ private slots:
         env->setFixture("hyprctl", "monitors.json", kTwoMonitors);
         env->setPointer(3000, 400); // inside HDMI-A-1 (2560..3200 logical after 1.5 scale)
         QVERIFY(env->request({"capture", "fullscreen"}).ok);
-        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "HDMI-A-1", "-t", "png", "-"}}));
+        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "HDMI-A-1", "-t", "ppm", "-"}}));
 
         env->setPointer(10, 10);
         QVERIFY(env->request({"capture", "fullscreen"}).ok);
-        QCOMPARE(env->calls("grim").last(), (QStringList{"-o", "DP-1", "-t", "png", "-"}));
+        QCOMPARE(env->calls("grim").last(), (QStringList{"-o", "DP-1", "-t", "ppm", "-"}));
     }
 
     // The layer surface has one output at a time: it must follow the newest Thumbnail, or a
@@ -79,7 +79,7 @@ private slots:
 
         const QString path = stack().save(id);
         QCOMPARE(path, env->screenshots() + "/2026-11-03_09-30-15.png");
-        QCOMPARE(TestEnv::readFile(path), TestEnv::defaultGrimPng()); // byte for byte, so pixel-identical
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(path)), TestEnv::defaultGrimImage()); // pixel-identical
         QCOMPARE(stack().count(), 0); // a saved Thumbnail goes away
     }
 

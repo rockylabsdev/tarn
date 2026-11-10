@@ -144,7 +144,7 @@ private slots:
     void printGrabsTheFrozenImageOnceBeforeTheOverlayOpens() {
         QSignalSpy opened(&env->daemon().service<Overlay>(), &Overlay::opened);
         QVERIFY(press());
-        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "DP-1", "-t", "png", "-"}}));
+        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "DP-1", "-t", "ppm", "-"}}));
         QCOMPARE(opened.count(), 1);
         QVERIFY(model().active());
         QCOMPARE(env->daemon().service<Overlay>().frozen().size(), QSize(128, 80));

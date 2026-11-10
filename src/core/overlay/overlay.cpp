@@ -61,15 +61,15 @@ void Overlay::restoreLastArea() {
 }
 
 Reply Overlay::open(OverlayModel::Mode mode, bool timer) {
-    if (isOpen())
+    if (isOpen() || m_daemon.service<ScreenGrabber>().busy())
         return Reply::success();
     m_daemon.service<HyprlandBridge>().takeSnapshot(); // before the Overlay is on screen
     QString error;
     const auto monitor = m_daemon.service<HyprlandBridge>().monitorUnderPointer(&error);
-    QByteArray png;
+    CaptureHide hide = m_daemon.service<ThumbnailStack>().hideForCapture(); // out of the frozen image
+    QImage image;
     if (monitor)
-        png = m_daemon.service<ScreenGrabber>().grabMonitor(monitor->name, &error);
-    QImage image = QImage::fromData(png, "PNG");
+        image = m_daemon.service<ScreenGrabber>().grabMonitor(monitor->name, &error);
     if (image.isNull()) {
         if (error.isEmpty())
             error = QStringLiteral("the screenshot could not be read");
@@ -77,6 +77,7 @@ Reply Overlay::open(OverlayModel::Mode mode, bool timer) {
         return Reply::failure(error);
     }
     m_frozen = std::move(image);
+    m_hide = std::move(hide);
     m_monitorName = monitor->name;
     m_monitorRect = monitor->logicalRect;
     m_held.clear();
@@ -111,6 +112,7 @@ void Overlay::close() {
     m_closing = m_hasSurface;
     emit closed();
     pushHeld();
+    m_hide.reset(); // the Thumbnails come back, a Sequence's held ones among them
 }
 
 void Overlay::pushHeld() {
@@ -186,8 +188,11 @@ void Overlay::onColorPicked(const QColor &color, bool asRgb) {
 void Overlay::onConfirmedWindow(const WindowInfo &window) {
     const QDateTime captureTime = m_daemon.now();
     const bool framed = !m_model.noFrame();
-    if (!m_model.active())
+    CaptureHide handoff; // the new Thumbnail is on the stack before the stack comes back
+    if (!m_model.active()) {
+        handoff = std::move(m_hide);
         close();
+    }
     if (m_model.mode() == OverlayModel::Text) { // Text capture of a window: read its pixels, copy the text
         m_daemon.service<TextCapture>().capture(cropSelection(m_frozen, m_monitorRect, window.rect));
         return;
@@ -213,8 +218,13 @@ void Overlay::onConfirmedWindow(const WindowInfo &window) {
 void Overlay::onConfirmed(const QRect &selection, OverlayModel::Mode mode) {
     const QDateTime captureTime = m_daemon.now();
     const bool framed = !m_model.noFrame(); // B skipped the auto-applied Preset
-    if (!m_model.active()) // a Sequence keeps the Overlay open
+    // Kept until the end: the Countdown or the Recording takes its own hide first, and a
+    // new Thumbnail is on the stack before the stack comes back.
+    CaptureHide handoff;
+    if (!m_model.active()) { // a Sequence keeps the Overlay open
+        handoff = std::move(m_hide);
         close();
+    }
     if (mode == OverlayModel::Screenshot && m_model.timer()) { // the Countdown takes the shot when it ends
         m_daemon.service<Countdown>().start(m_monitorName, m_monitorRect, selection, framed);
         return;

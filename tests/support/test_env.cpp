@@ -1,7 +1,9 @@
 #include "test_env.h"
 
 #include <QDir>
+#include <QBuffer>
 #include <QFile>
+#include <QImage>
 #include <QStandardPaths>
 #include <QTest>
 
@@ -107,6 +109,16 @@ void TestEnv::setFixture(const QString &stub, const QString &file, const QByteAr
     QFile f(stateDir() + "/fixtures/" + stub + '/' + file);
     QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
     f.write(content);
+    f.close();
+    // grim's shot is uncompressed (-t ppm): the stub answers with the same pixels as PPM.
+    if (stub == QLatin1String("grim") && file == QLatin1String("output.png")) {
+        QByteArray ppm;
+        QBuffer buffer(&ppm);
+        buffer.open(QIODevice::WriteOnly);
+        const QImage image = QImage::fromData(content, "PNG");
+        QVERIFY2(!image.isNull() && image.convertToFormat(QImage::Format_RGB32).save(&buffer, "PPM"), "the grim fixture is not a PNG");
+        setFixture(stub, QStringLiteral("output.ppm"), ppm);
+    }
 }
 
 void TestEnv::setPointer(int x, int y) {
@@ -115,6 +127,10 @@ void TestEnv::setPointer(int x, int y) {
 
 QByteArray TestEnv::defaultGrimPng() {
     return readFile(QStringLiteral(TARN_STUB_DIR "/fixtures/grim/output.png"));
+}
+
+QImage TestEnv::pixelsOf(const QByteArray &bytes) {
+    return QImage::fromData(bytes).convertToFormat(QImage::Format_RGB32);
 }
 
 QStringList TestEnv::filesIn(const QString &dir) {

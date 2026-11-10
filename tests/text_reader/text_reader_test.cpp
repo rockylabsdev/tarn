@@ -57,7 +57,7 @@ private slots:
         QTRY_COMPARE(spy.count(), 1);
         QCOMPARE(spy.first().first().toString(), QString("2026-11-03_09-30-15"));
         QVERIFY(describe("2026-11-03_09-30-15")["text"].toString().contains("Tarn takes screenshots"));
-        QCOMPARE(env->stdinOfCall("tesseract", 1), TestEnv::defaultGrimPng());
+        QCOMPARE(TestEnv::pixelsOf(env->stdinOfCall("tesseract", 1)), TestEnv::defaultGrimImage());
     }
 
     void aPictureWithNoTextGetsAnEmptyString() {

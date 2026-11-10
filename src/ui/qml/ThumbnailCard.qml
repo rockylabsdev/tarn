@@ -72,6 +72,20 @@ Item {
     }
     Component.onDestruction: board.unregister(card)
 
+    // Back from a Capture hide: in from the left edge on the enter spring, straight
+    // at its place in the stack. A card already leaving keeps leaving.
+    function springBack() {
+        if (leaving)
+            return;
+        up.snap();
+        across.response = Style.thumbEnterResponse;
+        across.bounce = Style.thumbEnterBounce;
+        across.velocity = 0;
+        across.value = offX;
+        across.to = Style.thumbEdge;
+        across.start();
+    }
+
     // The stack closed this Thumbnail (Save, Copy, ×, or anything else to come).
     // Copy and Save first show their check.
     function closed() {

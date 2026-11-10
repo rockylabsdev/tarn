@@ -9,10 +9,13 @@
 #include "notify/notifier.h"
 #include "overlay.h"
 #include "state/remembered_state.h"
+#include "thumbnails/thumbnail_stack.h"
 
 namespace tarn {
 
 static Reply captureRepeat(Daemon &daemon) {
+    if (daemon.service<ScreenGrabber>().busy())
+        return Reply::success(); // pressed again while a shot is being taken
     const QDateTime captureTime = daemon.now();
     auto &overlay = daemon.service<Overlay>();
     auto &bridge = daemon.service<HyprlandBridge>();
@@ -26,7 +29,9 @@ static Reply captureRepeat(Daemon &daemon) {
     const auto monitor = bridge.monitorContaining(area.center(), &error);
     if (!monitor)
         return overlay.open(OverlayModel::Screenshot); // the area is no longer on a monitor
-    QImage image = QImage::fromData(daemon.service<ScreenGrabber>().grabMonitor(monitor->name, &error), "PNG");
+    // Off screen for grim; back once the new Thumbnail is on the stack.
+    const CaptureHide hide = daemon.service<ThumbnailStack>().hideForCapture();
+    const QImage image = daemon.service<ScreenGrabber>().grabMonitor(monitor->name, &error);
     if (image.isNull()) {
         if (error.isEmpty())
             error = QStringLiteral("the screenshot could not be read");

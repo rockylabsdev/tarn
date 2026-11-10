@@ -13,6 +13,8 @@
 #include "storage/image_file.h"
 #include "storage/storage.h"
 
+#include <QBuffer>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -34,11 +36,17 @@ int ThumbnailStack::count() const {
 }
 
 int ThumbnailStack::add(const QByteArray &png, const QDateTime &captureTime, const CaptureName &name, bool framed) {
-    QImage image = QImage::fromData(png, "PNG");
-    if (image.isNull())
+    return add(QImage::fromData(png, "PNG"), QtFuture::makeReadyValueFuture(png), captureTime, name, framed);
+}
+
+int ThumbnailStack::add(const QImage &shot, const QFuture<QByteArray> &png, const QDateTime &captureTime, const CaptureName &name,
+                        bool framed) {
+    if (shot.isNull())
         return -1;
+    QImage image = shot;
     Entry entry;
-    entry.png = png;
+    entry.pendingPng = png;
+    entry.original = shot;
     // The auto-applied Preset: the Frame is part of the capture from the start,
     // so the card, auto Copy / Save and the overflow auto-save all use the framed image
     // (History keeps the untouched original). B in the Overlay passes framed = false.
@@ -59,7 +67,18 @@ int ThumbnailStack::add(const QByteArray &png, const QDateTime &captureTime, con
     entry.captureTime = captureTime;
     entry.name = name;
     const int id = insert(std::move(entry));
-    applySettings(id);
+    Entry *added = entryFor(id);
+    if (!added) // already closed (over the limit with a failed save cannot close it, so never)
+        return id;
+    added->settingsPending = true;
+    if (png.isFinished())
+        settle(*added);
+    else
+        QFuture<QByteArray>(png).then(this, [this, id](const QByteArray &) {
+            if (Entry *e = entryFor(id))
+                settle(*e);
+        });
+    armAutoClose(id);
     return id;
 }
 
@@ -94,14 +113,39 @@ int ThumbnailStack::insert(Entry entry) {
     return id;
 }
 
-// The Settings that act on a fresh capture: Copy / Save automatically (the
-// Thumbnail stays on screen either way) and the auto-close timer. A Recording
-// gets none of them (it comes in through addRecording).
-void ThumbnailStack::applySettings(int id) {
-    auto &settings = m_daemon.service<Settings>();
+ThumbnailStack::Entry *ThumbnailStack::settledEntry(int id) {
     Entry *entry = entryFor(id);
-    if (!entry)
-        return;
+    if (entry)
+        settle(*entry);
+    return entry;
+}
+
+// The PNG is ready (or is waited for now): the Thumbnail works from it from now on,
+// and Copy / Save automatically, which waited for it, run.
+void ThumbnailStack::settle(Entry &entry) {
+    if (entry.pendingPng.isValid()) {
+        const QByteArray png = entry.pendingPng.result();
+        entry.pendingPng = {};
+        if (!png.isEmpty()) {
+            entry.png = png;
+            entry.original = {};
+        } else { // encoding failed: made here instead, so nothing ever works from a missing file
+            QBuffer buffer(&entry.png);
+            buffer.open(QIODevice::WriteOnly);
+            entry.original.save(&buffer, "PNG");
+            entry.original = {};
+        }
+    }
+    if (std::exchange(entry.settingsPending, false))
+        applyCopySave(entry);
+}
+
+// The Settings that act on a fresh capture: Copy / Save automatically (the
+// Thumbnail stays on screen either way). The auto-close timer is armed in add().
+// A Recording gets none of them (it comes in through addRecording).
+void ThumbnailStack::applyCopySave(Entry &e) {
+    auto &settings = m_daemon.service<Settings>();
+    Entry *entry = &e;
     QString error;
     if (settings.copyAutomatically() &&
         m_daemon.service<Clipboard>().copyPng(entry->current(), entry->captureTime, &error, entry->name).isEmpty())
@@ -117,7 +161,6 @@ void ThumbnailStack::applySettings(int id) {
         if (!path.isEmpty())
             entry->savedPath = path;
     }
-    armAutoClose(id);
 }
 
 // (Re)starts the auto-close delay for a Thumbnail: the full delay from now. An
@@ -129,12 +172,51 @@ void ThumbnailStack::armAutoClose(int id) {
     if (!entry || entry->kind == Recording || seconds <= 0)
         return;
     const int token = ++entry->autoCloseToken;
-    // Like the x button: nothing is saved. A Thumbnail being edited is the Editor's, so it stays.
+    entry->autoCloses = true;
+    // Like the x button: nothing is saved. A Thumbnail being edited is the Editor's, so it stays;
+    // one off screen for a capture is re-armed when the stack comes back.
     QTimer::singleShot(qRound(seconds * 1000), this, [this, id, token] {
         const Entry *e = entryFor(id);
-        if (e && !e->hidden && e->autoCloseToken == token)
+        if (e && !e->hidden && !captureHidden() && e->autoCloseToken == token)
             autoClose(id);
     });
+}
+
+CaptureHide &CaptureHide::operator=(CaptureHide &&other) noexcept {
+    if (this != &other) {
+        reset();
+        m_stack = std::exchange(other.m_stack, nullptr);
+    }
+    return *this;
+}
+
+void CaptureHide::reset() {
+    if (ThumbnailStack *stack = std::exchange(m_stack, nullptr))
+        stack->releaseCaptureHide();
+}
+
+CaptureHide ThumbnailStack::hideForCapture() {
+    if (m_captureHides++ == 0) {
+        m_leaving = count() > 0;
+        emit captureHiddenChanged();
+    }
+    return CaptureHide(this);
+}
+
+void ThumbnailStack::releaseCaptureHide() {
+    if (m_captureHides <= 0 || --m_captureHides > 0)
+        return;
+    m_leaving = false;
+    emit captureHiddenChanged();
+    // The full auto-close delay again, from the moment the stack is back.
+    for (const auto &e : m_entries)
+        if (e.autoCloses && !e.hidden)
+            armAutoClose(e.id);
+}
+
+void ThumbnailStack::waitUntilOffScreen() {
+    if (captureHidden() && std::exchange(m_leaving, false))
+        QCoreApplication::processEvents();
 }
 
 void ThumbnailStack::failure(const QString &summary, const QString &why) {
@@ -159,6 +241,7 @@ void ThumbnailStack::enforceLimit() {
 }
 
 bool ThumbnailStack::autoSave(Entry &entry) {
+    settle(entry);
     if (entry.kind == Recording) {
         QString error;
         if (m_daemon.service<RecordingStore>().saveToFolder(entry.videoPath, &error).isEmpty()) {
@@ -180,7 +263,7 @@ bool ThumbnailStack::autoSave(Entry &entry) {
 }
 
 QString ThumbnailStack::save(int id) {
-    Entry *entry = entryFor(id);
+    Entry *entry = settledEntry(id);
     if (!entry)
         return {};
     if (entry->kind == Recording) {
@@ -228,7 +311,7 @@ CaptureName ThumbnailStack::captureName(int id) const {
 }
 
 bool ThumbnailStack::saveAs(int id, const QString &path) {
-    Entry *entry = entryFor(id);
+    Entry *entry = settledEntry(id);
     if (!entry || entry->kind == Recording || path.isEmpty())
         return false;
     if (!m_daemon.service<History>().saveImageAs(entry->historyId, entry->current(), path))
@@ -238,7 +321,7 @@ bool ThumbnailStack::saveAs(int id, const QString &path) {
 }
 
 bool ThumbnailStack::copy(int id) {
-    Entry *entry = entryFor(id);
+    Entry *entry = settledEntry(id);
     if (!entry)
         return false;
     QString error;
@@ -258,7 +341,7 @@ bool ThumbnailStack::copy(int id) {
 }
 
 ThumbnailStack::Capture ThumbnailStack::pin(int id) {
-    const Entry *entry = entryFor(id);
+    const Entry *entry = settledEntry(id);
     if (!entry || entry->kind == Recording)
         return {};
     Capture capture{entry->png, entry->edited, entry->captureTime, entry->name, entry->historyId, entry->origin};
@@ -398,6 +481,7 @@ void ThumbnailStack::closeFor(int id, CloseReason reason) {
             index = i;
     if (index < 0)
         return;
+    settle(m_entries[index]); // the restore slot keeps a whole capture
     const int row = visibleRow(id);
     if (row >= 0)
         beginRemoveRows({}, row, row);
@@ -460,7 +544,7 @@ bool ThumbnailStack::isHidden(int id) const {
 }
 
 void ThumbnailStack::setEdited(int id, const QByteArray &png) {
-    Entry *entry = entryFor(id);
+    Entry *entry = settledEntry(id);
     if (entry) {
         // An earlier save no longer matches once the picture changes (an Editor
         // visit that changed nothing keeps it).
@@ -487,7 +571,9 @@ std::optional<Frame> ThumbnailStack::autoFrame(int id) const {
 
 QImage ThumbnailStack::originalImage(int id) const {
     const Entry *entry = entryFor(id);
-    return entry ? QImage::fromData(entry->png, "PNG") : QImage();
+    if (!entry)
+        return {};
+    return entry->original.isNull() ? QImage::fromData(entry->png, "PNG") : entry->original; // no wait for the PNG
 }
 
 QByteArray ThumbnailStack::edited(int id) const {
@@ -597,7 +683,7 @@ void ThumbnailStack::setHistoryId(int id, const QString &historyId, bool writePr
     // The auto-applied Preset is the capture's first edit: History hands out the
     // framed shot the Thumbnail shows, and the Editor reopens with the Frame.
     if (entry->autoFrame && writeProject) {
-        CaptureDocument document(QImage::fromData(entry->png, "PNG"));
+        CaptureDocument document(originalImage(id));
         document.setFrameLive(*entry->autoFrame);
         m_daemon.service<History>().saveProject(historyId, document);
     }

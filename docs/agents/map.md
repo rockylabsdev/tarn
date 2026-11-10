@@ -10,7 +10,8 @@ The bugs v2's review found sat at these hand-offs (the kind always passed as "ar
 key or `tarn` command → daemon (control socket) → module command
   capture fullscreen        capture/capture_fullscreen.cpp
   area, window, Sequence…   overlay/: Overlay opens on a frozen shot, then deliver()
-    → ScreenGrabber (grab/, grim)          the shot
+    → ThumbnailStack::hideForCapture       Capture hide: Thumbnails off screen until the capture is on the stack
+    → ScreenGrabber (grab/, grim -t ppm)   the shot's pixels; the kept PNG is made in the background (storage/png_encoder)
     → History::record (history/)           the original + its Description (<id>.png + <id>.json)
     → ThumbnailStack::add (thumbnails/)    a Thumbnail
     → ThumbnailStack::setHistoryId         links the two; writes the auto-applied Preset's Project file

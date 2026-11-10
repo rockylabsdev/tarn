@@ -46,7 +46,7 @@ private slots:
         QVERIFY(env->request({"capture", "fullscreen"}).ok);
         history().flush();
         QCOMPARE(TestEnv::filesIn(historyDir()), (QStringList{"2026-11-03_09-30-15.json", "2026-11-03_09-30-15.png"}));
-        QCOMPARE(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-15.png"), TestEnv::defaultGrimPng());
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-15.png")), TestEnv::defaultGrimImage());
     }
 
     void theDescriptionIsFilled() {
@@ -85,7 +85,7 @@ private slots:
         history().addSavedPath("2026-11-03_09-30-15", "/elsewhere/a.png");
         QCOMPARE(describe("2026-11-03_09-30-15")["savedPaths"].toArray().size(), 2);
         // The PNG stays the untouched original.
-        QCOMPARE(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-15.png"), TestEnv::defaultGrimPng());
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(historyDir() + "/2026-11-03_09-30-15.png")), TestEnv::defaultGrimImage());
     }
 
     void aFailedCaptureWritesNothing() {

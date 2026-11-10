@@ -179,7 +179,7 @@ private slots:
         applyConfig("save_automatically", "true");
         setWindow("firefox", QString::fromUtf8("Issue 72 · GitHub — Mozilla Firefox"));
         const int id = shoot();
-        QCOMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"screen_Issue-72-GitHub.png"}); // auto-save
+        QTRY_COMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"screen_Issue-72-GitHub.png"}); // auto-save, once the PNG is made
         QCOMPARE(stack().saveAsSuggestion(id), env->screenshots() + "/screen_Issue-72-GitHub.png");
         QVERIFY(stack().copy(id));
         QCOMPARE(TestEnv::filesIn(shared()), QStringList{"screen_Issue-72-GitHub.png"});
@@ -257,11 +257,11 @@ private slots:
         shoot();
         const QString webp = env->screenshots() + "/2026-11-02_14-03-22.webp";
         if (QImageWriter::supportedImageFormats().contains("webp")) {
-            QVERIFY(QFile::exists(webp));
+            QTRY_VERIFY(QFile::exists(webp)); // once the PNG is made
             QCOMPARE(QImageReader(webp).format().toLower(), QByteArray("webp"));
         } else { // no Qt plugin on this machine: nothing half-written, and the user is told
+            QTRY_COMPARE(env->calls("notify-send").size(), 1); // once the PNG is made
             QVERIFY(!QFile::exists(webp));
-            QCOMPARE(env->calls("notify-send").size(), 1);
         }
         applyConfig("image_format", "\"png\"");
         QCOMPARE(stack().saveAsFilterIndex(), 0);

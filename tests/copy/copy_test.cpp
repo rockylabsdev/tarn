@@ -44,7 +44,7 @@ private slots:
         QCOMPARE(env->calls("tarn-clip"), (QList<QStringList>{{file}}));
         QVERIFY(env->calls("wl-copy").isEmpty());
         QCOMPARE(TestEnv::filesIn(shared()), QStringList{"2026-11-03_09-30-15.png"});
-        QCOMPARE(TestEnv::readFile(file), TestEnv::defaultGrimPng());
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(file)), TestEnv::defaultGrimImage());
     }
 
     void copyClosesTheThumbnailQuietly() {

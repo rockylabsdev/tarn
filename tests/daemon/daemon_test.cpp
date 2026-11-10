@@ -74,7 +74,7 @@ private slots:
         QVERIFY2(startDaemon(), daemon.readAll().constData());
         const Run r = runTarn({"capture", "fullscreen"});
         QCOMPARE(r.exitCode, 0);
-        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "DP-1", "-t", "png", "-"}}));
+        QCOMPARE(env->calls("grim"), (QList<QStringList>{{"-o", "DP-1", "-t", "ppm", "-"}}));
     }
 
     void aFailedCaptureIsReportedByTheClient() {

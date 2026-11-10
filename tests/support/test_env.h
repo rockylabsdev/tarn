@@ -12,6 +12,7 @@
 #include "daemon/daemon.h"
 
 #include <QByteArray>
+#include <QImage>
 #include <QDateTime>
 #include <QHash>
 #include <QList>
@@ -64,6 +65,11 @@ public:
 
     // The bytes of the canned grim image shipped with the harness.
     static QByteArray defaultGrimPng();
+    // Its pixels. grim's shot is uncompressed and Tarn makes the PNG it keeps, so a
+    // kept file has these pixels, not grim's bytes.
+    static QImage defaultGrimImage() { return pixelsOf(defaultGrimPng()); }
+    // An encoded picture's pixels, in one format so two files compare by content.
+    static QImage pixelsOf(const QByteArray &bytes);
 
     // Files directly in a folder, sorted by name (empty if it does not exist).
     static QStringList filesIn(const QString &dir);

@@ -9,26 +9,55 @@
 //     and does not count toward the 4. It is not a row of the model while hidden;
 //   - one restore slot: whatever Thumbnail closed last, with its edits, comes
 //     back with restore() (`tarn restore`), whatever closed it;
+//   - Capture hide: the whole stack is off screen while Tarn takes a shot or
+//     records (hideForCapture), so Thumbnails are never in a capture. Not the
+//     same as hidden while editing: the model keeps its rows, only the surface goes;
 //   - kinds: a Screenshot, or a Recording (a poster frame plus the kept file).
 //     The auto-close Setting never applies to a Recording (autoClose refuses).
 #include <QAbstractListModel>
 
 #include <QByteArray>
 #include <QDateTime>
+#include <QFuture>
 #include <QImage>
+#include <QPointer>
 #include <QRect>
 #include "frame/frame.h"
 #include "storage/file_name.h"
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace tarn {
 
 class Daemon;
+class ThumbnailStack;
+
+// One hold of the Capture hide: the stack stays off screen while any hold lives.
+// Move it to hand the hide on to the next step (the Overlay to the Countdown or
+// the Recording), so the stack never shows between them. Destroying or reset()
+// releases it; a hold that outlives the stack does nothing.
+class CaptureHide {
+public:
+    CaptureHide() = default;
+    CaptureHide(CaptureHide &&other) noexcept : m_stack(std::exchange(other.m_stack, nullptr)) {}
+    CaptureHide &operator=(CaptureHide &&other) noexcept;
+    CaptureHide(const CaptureHide &) = delete;
+    CaptureHide &operator=(const CaptureHide &) = delete;
+    ~CaptureHide() { reset(); }
+    void reset();
+    explicit operator bool() const { return !m_stack.isNull(); }
+
+private:
+    friend class ThumbnailStack;
+    explicit CaptureHide(ThumbnailStack *stack) : m_stack(stack) {}
+    QPointer<ThumbnailStack> m_stack;
+};
 
 class ThumbnailStack : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(bool captureHidden READ captureHidden NOTIFY captureHiddenChanged)
 public:
     enum Role { IdRole = Qt::UserRole + 1, KindRole };
     enum Kind { Screenshot, Recording };
@@ -49,6 +78,12 @@ public:
     // with a Preset marked to apply to every capture, the Thumbnail starts out with
     // that Frame (as its edit), so every Copy, Save and overflow includes it.
     int add(const QByteArray &png, const QDateTime &captureTime, const CaptureName &name = {}, bool framed = true);
+    // The same for a shot whose PNG is still being made (encodePngInBackground): the
+    // card shows `image` at once. Copy / Save automatically wait for the PNG; an
+    // action that needs it before then (Copy, Save, Pin, a close) waits for it, so
+    // nothing ever works from a partial file.
+    int add(const QImage &image, const QFuture<QByteArray> &png, const QDateTime &captureTime, const CaptureName &name = {},
+            bool framed = true);
     // Adds a Recording: its poster frame (PNG), the kept video file (in the kept
     // folder, see RecordingStore) and its length. Not in History, a Pin only for a GIF, never
     // auto-closes. Save writes the file to the Recordings folder, Copy puts a
@@ -132,6 +167,17 @@ public:
     bool restore();
     bool canRestore() const { return m_slot.has_value(); }
 
+    // Capture hide: the surface goes off screen in one frame while any hold
+    // lives, and every Thumbnail springs back in together when the last one is
+    // released. Thumbnails added meanwhile wait off screen too. No Thumbnail
+    // auto-closes while hidden; the full delay starts again on return.
+    [[nodiscard]] CaptureHide hideForCapture();
+    bool captureHidden() const { return m_captureHides > 0; }
+    // Before grim or the recorder runs: once the surface has been told to go, one
+    // pass of the event loop gets it off screen (measured on the nested bench:
+    // docs/hyprland.md). Costs nothing when no Thumbnail was on screen.
+    void waitUntilOffScreen();
+
     // The Editor opened / closed on this Thumbnail. Hidden ones leave the
     // model (signal hidden) and do not count toward the 4; un-hiding puts it
     // back in its place (signal revealed) and may auto-save the oldest.
@@ -189,6 +235,8 @@ public:
 signals:
     void countChanged();
     void monitorChanged();
+    // The Capture hide began (the surface goes now) or ended (it comes back).
+    void captureHiddenChanged();
     // A Thumbnail joined / left the stack. Closed is emitted at once; the QML
     // screen keeps showing the card while its exit animation runs.
     void added(int id);
@@ -205,6 +253,9 @@ signals:
     void trimRequested(int id);
 
 private:
+    friend class CaptureHide;
+    void releaseCaptureHide();
+
     struct Entry {
         int id;
         QByteArray png; // grim's bytes, or a Recording's poster
@@ -222,6 +273,10 @@ private:
         bool hidden = false;
         QString savedPath; // written by Save automatically (or overflow) and not edited since
         int autoCloseToken = 0; // the newest auto-close timer; older ones do nothing
+        bool autoCloses = false; // armed by the auto-close Setting: re-armed after a Capture hide
+        QFuture<QByteArray> pendingPng; // the PNG still being made; `png` is empty until then
+        QImage original;                // the shot's pixels while its PNG is being made
+        bool settingsPending = false;   // Copy / Save automatically wait for the PNG
         QStringList pendingSavedPaths; // saved automatically before the History entry was linked
         QByteArray current() const { return edited.isEmpty() ? png : edited; }
     };
@@ -232,11 +287,14 @@ private:
     static bool isGif(const Entry &entry);
     int insert(Entry entry);
     Entry *entryFor(int id);
+    // entryFor, once its PNG exists (waiting for it if it is still being made).
+    Entry *settledEntry(int id);
+    void settle(Entry &entry);
+    void applyCopySave(Entry &entry);
     const Entry *entryFor(int id) const;
     int visibleRow(int id) const; // -1 if hidden or unknown
     void closeFor(int id, CloseReason reason);
     void enforceLimit();
-    void applySettings(int id);
     void armAutoClose(int id);
     // Auto-saves the entry (a Recording has nothing to write); false after notifying.
     bool autoSave(Entry &entry);
@@ -248,6 +306,8 @@ private:
     std::optional<Slot> m_slot;
     int m_nextId = 1;
     QString m_monitorName;
+    int m_captureHides = 0;      // live CaptureHide holds
+    bool m_leaving = false;      // the hide began with Thumbnails on screen: the next grab waits one pass
 };
 
 } // namespace tarn

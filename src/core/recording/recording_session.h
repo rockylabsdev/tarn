@@ -18,9 +18,14 @@
 // encodingProgress() 0..1 (at most 10 changes a second, for the bar and the Shell socket).
 // No gifski, no GIF: the Recording does not start (a notification says why).
 //
+// The Thumbnails are off screen (Capture hide) from before the recorder starts
+// until it has exited: whatever the area, a restart included, until stop, Delete
+// or a failure. A GIF's encoding runs with them back.
+//
 // The recorder is an asynchronous QProcess (ProcessRunner blocks), started with
 // the arguments in recorderArguments() and stopped with SIGINT.
 #include "storage/file_name.h"
+#include "thumbnails/thumbnail_stack.h"
 
 #include <QByteArray>
 #include <QDateTime>
@@ -239,6 +244,7 @@ private:
     bool m_stripWas = false;
     QDateTime m_hideAt;           // when it hides; invalid while the pointer is on it (or paused)
     QTimer m_autoTimer;
+    CaptureHide m_hide;           // the Thumbnails, while the recorder runs
 };
 
 } // namespace tarn

@@ -122,7 +122,7 @@ private slots:
         // ...and the new folder is what Save really uses.
         const int id = capture();
         QVERIFY(id > 0);
-        QCOMPARE(TestEnv::filesIn(env->home() + "/Elsewhere/Shots").size(), 1);
+        QTRY_COMPARE(TestEnv::filesIn(env->home() + "/Elsewhere/Shots").size(), 1); // once the PNG is made
         QVERIFY(TestEnv::filesIn(env->screenshots()).isEmpty());
     }
 
@@ -266,7 +266,7 @@ private slots:
         QTRY_VERIFY(settings().saveAutomatically());
         const int id = capture();
         QVERIFY(id > 0);
-        QCOMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"2026-11-03_09-30-15.png"});
+        QTRY_COMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"2026-11-03_09-30-15.png"}); // once the PNG is made
         const QString path = stack().save(id);
         QCOMPARE(QFileInfo(path).fileName(), QString("2026-11-03_09-30-15.png"));
         QCOMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"2026-11-03_09-30-15.png"}); // no _2
@@ -275,6 +275,7 @@ private slots:
         // After an edit the picture differs from the saved file, so Save writes it.
         const int second = capture();
         QVERIFY(second > 0);
+        QTRY_COMPARE(TestEnv::filesIn(env->screenshots()).size(), 2);
         QImage changed(8, 8, QImage::Format_ARGB32);
         changed.fill(Qt::red);
         QByteArray png;
@@ -300,7 +301,7 @@ private slots:
         QTRY_VERIFY(settings().copyAutomatically() && settings().saveAutomatically());
         QVERIFY(capture() > 0);
         QCOMPARE(stack().count(), 1);
-        QCOMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"2026-11-03_09-30-15.png"});
+        QTRY_COMPARE(TestEnv::filesIn(env->screenshots()), QStringList{"2026-11-03_09-30-15.png"}); // once the PNG is made
         QCOMPARE(env->calls("tarn-clip").size(), 1);
         // The saved path is recorded with the History entry, as for the Save button.
         history().flush();
@@ -312,7 +313,7 @@ private slots:
         writeConfig("copy_automatically = true\n");
         QTRY_VERIFY(settings().copyAutomatically());
         QVERIFY(capture() > 0);
-        QCOMPARE(env->calls("tarn-clip").size(), 1);
+        QTRY_COMPARE(env->calls("tarn-clip").size(), 1); // once the PNG is made
         QVERIFY(TestEnv::filesIn(env->screenshots()).isEmpty());
         QCOMPARE(stack().count(), 1);
     }

@@ -291,6 +291,9 @@ Reply RecordingSession::begin(const QRect &area, const QRect &monitorRect, qreal
     updateBar();
     setState(Starting); // the outline turns red now
 
+    // Out of the footage: off screen before the recorder's first frame.
+    m_hide = m_daemon.service<ThumbnailStack>().hideForCapture();
+    m_daemon.service<ThumbnailStack>().waitUntilOffScreen();
     delete m_process;
     m_process = new QProcess(this);
     m_process->setProcessChannelMode(QProcess::MergedChannels);
@@ -412,11 +415,13 @@ void RecordingSession::deleteRecording() {
     if ((m_state != Recording && m_state != Paused) || m_stopping)
         return;
     teardownRecorder();
+    m_hide.reset();
     m_frozenMs = m_accumMs = 0;
     setState(Deleted); // the bar goes with it; no Thumbnail, no History
 }
 
 void RecordingSession::onFinished(int, QProcess::ExitStatus) {
+    m_hide.reset(); // the recorder is gone: the Thumbnails come back, before any Thumbnail or GIF is made
     m_poll.stop();
     m_startTimeout.stop();
     m_stopTimeout.stop();
@@ -447,6 +452,7 @@ void RecordingSession::fail(const QString &why) {
 }
 
 void RecordingSession::reset() {
+    m_hide.reset();
     m_stopWanted = m_stopping = false;
     m_area = QRect();
     emit areaChanged();
