@@ -83,6 +83,18 @@ private slots:
         QCOMPARE(stack().count(), 0); // a saved Thumbnail goes away
     }
 
+    // The PNG is made in the background; anything pressed before it exists waits for it.
+    void copySaveAndPinStraightAfterACaptureHaveGrimsPixels() {
+        QVERIFY(stack().copy(captureOne()));
+        QCOMPARE(TestEnv::pixelsOf(env->stdinOfCall("tarn-clip", 1).isEmpty()
+                                       ? TestEnv::readFile(env->calls("tarn-clip").first().first())
+                                       : env->stdinOfCall("tarn-clip", 1)),
+                 TestEnv::defaultGrimImage());
+        QCOMPARE(TestEnv::pixelsOf(TestEnv::readFile(stack().save(captureOne()))), TestEnv::defaultGrimImage());
+        const ThumbnailStack::Capture pinned = stack().pin(captureOne());
+        QCOMPARE(TestEnv::pixelsOf(pinned.png), TestEnv::defaultGrimImage());
+    }
+
     void saveCreatesAMissingFolder() {
         QVERIFY(!QFile::exists(env->pictures()));
         QVERIFY(!stack().save(captureOne()).isEmpty());

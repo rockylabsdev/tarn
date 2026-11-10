@@ -81,7 +81,8 @@ private:
     void onColorPicked(const QColor &color, bool asRgb);
     void close();
     // A finished shot: onto the stack at once, or (Sequence) held in order until close().
-    void deliver(const QByteArray &png, const QDateTime &captureTime, const CaptureName &name, bool framed, const QString &historyId,
+    // `image` shows at once; `png` is made in the background (encodePngInBackground).
+    void deliver(const QImage &image, const QFuture<QByteArray> &png, const QDateTime &captureTime, const CaptureName &name, bool framed, const QString &historyId,
                  const QRect &origin);
     void pushHeld();
     void remember(const QRect &selection);
@@ -99,7 +100,8 @@ private:
     // this on (the Countdown and the Recording take their own before it is released).
     CaptureHide m_hide;
     struct Held {
-        QByteArray png;
+        QImage image;
+        QFuture<QByteArray> png;
         QDateTime captureTime;
         CaptureName name;
         bool framed;

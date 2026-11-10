@@ -68,7 +68,7 @@ int ThumbnailStack::add(const QImage &shot, const QFuture<QByteArray> &png, cons
     entry.name = name;
     const int id = insert(std::move(entry));
     Entry *added = entryFor(id);
-    if (!added) // already closed (over the limit with a failed save cannot close it, so never)
+    if (!added)
         return id;
     added->settingsPending = true;
     if (png.isFinished())
@@ -121,7 +121,7 @@ ThumbnailStack::Entry *ThumbnailStack::settledEntry(int id) {
 }
 
 // The PNG is ready (or is waited for now): the Thumbnail works from it from now on,
-// and Copy / Save automatically, which waited for it, run.
+// and Copy / Save automatically run, which were held back until it existed.
 void ThumbnailStack::settle(Entry &entry) {
     if (entry.pendingPng.isValid()) {
         const QByteArray png = entry.pendingPng.result();
@@ -174,7 +174,7 @@ void ThumbnailStack::armAutoClose(int id) {
     const int token = ++entry->autoCloseToken;
     entry->autoCloses = true;
     // Like the x button: nothing is saved. A Thumbnail being edited is the Editor's, so it stays;
-    // one off screen for a capture is re-armed when the stack comes back.
+    // during a Capture hide nothing closes (releaseCaptureHide arms the full delay again).
     QTimer::singleShot(qRound(seconds * 1000), this, [this, id, token] {
         const Entry *e = entryFor(id);
         if (e && !e->hidden && !captureHidden() && e->autoCloseToken == token)
@@ -661,11 +661,10 @@ bool ThumbnailStack::saveRecordingAs(int id, const QString &path) {
     return true;
 }
 
-void ThumbnailStack::saveAutoProject(const QString &historyId, const QByteArray &png, bool framed) {
+void ThumbnailStack::saveAutoProject(const QString &historyId, const QImage &image, bool framed) {
     if (!framed || historyId.isEmpty())
         return;
     const auto frame = m_daemon.service<PresetStore>().autoFrame();
-    const QImage image = QImage::fromData(png, "PNG");
     if (!frame || image.isNull())
         return;
     CaptureDocument document(image);
