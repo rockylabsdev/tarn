@@ -218,7 +218,7 @@ public:
     // Writes the Project file of the auto-applied Preset (and Watermark) for a shot
     // that is in History but not on the stack yet (a Sequence's), unless `framed`
     // is false or no Preset is marked. Same file setHistoryId writes for a Thumbnail.
-    void saveAutoProject(const QString &historyId, const QByteArray &png, bool framed);
+    void saveAutoProject(const QString &historyId, const QImage &image, bool framed);
     QString historyId(int id) const;
 
     QImage image(int id) const;

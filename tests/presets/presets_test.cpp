@@ -537,6 +537,7 @@ private slots:
         QTRY_VERIFY(env->daemon().service<tarn::Settings>().copyAutomatically());
         const int id = fullscreen();
         QVERIFY(id > 0);
+        QTRY_COMPARE(TestEnv::filesIn(sharedDir()).size(), 1); // Copy and Save run once the PNG is made
         const QStringList saved = TestEnv::filesIn(env->screenshots());
         QCOMPARE(saved.size(), 1);
         const QImage savedImage(env->screenshots() + "/" + saved.first());
@@ -550,8 +551,8 @@ private slots:
         QVERIFY(env->request({"capture", "area"}).ok);
         model().keyPressed(Qt::Key_B);
         drag();
+        QTRY_COMPARE(TestEnv::filesIn(env->screenshots()).size(), 2); // once the PNG is made
         const QStringList both = TestEnv::filesIn(env->screenshots());
-        QCOMPARE(both.size(), 2);
         QCOMPARE(QImage(env->screenshots() + "/" + both.last()).size(), QSize(40, 40));
     }
 

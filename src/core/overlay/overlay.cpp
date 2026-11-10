@@ -13,12 +13,12 @@
 #include "recording/recording_session.h"
 #include "saved_colors/saved_colors.h"
 #include "settings/settings.h"
+#include "storage/png_encoder.h"
 #include "state/remembered_state.h"
 #include "text/text_capture.h"
 #include "thumbnails/thumbnail_stack.h"
 #include "window_shot.h"
 
-#include <QBuffer>
 #include <QEventLoop>
 #include <QTimer>
 
@@ -119,7 +119,7 @@ void Overlay::pushHeld() {
     auto &stack = m_daemon.service<ThumbnailStack>();
     const QList<Held> held = std::exchange(m_held, {});
     for (const Held &shot : held) { // in order; the stack's overflow rule applies as they arrive
-        const int id = stack.add(shot.png, shot.captureTime, shot.name, shot.framed);
+        const int id = stack.add(shot.image, shot.png, shot.captureTime, shot.name, shot.framed);
         if (id < 0)
             continue;
         stack.setHistoryId(id, shot.historyId, false); // its Project file was written in deliver()
@@ -127,16 +127,16 @@ void Overlay::pushHeld() {
     }
 }
 
-void Overlay::deliver(const QByteArray &png, const QDateTime &captureTime, const CaptureName &name, bool framed,
-                      const QString &historyId, const QRect &origin) {
+void Overlay::deliver(const QImage &image, const QFuture<QByteArray> &png, const QDateTime &captureTime, const CaptureName &name,
+                      bool framed, const QString &historyId, const QRect &origin) {
     if (m_model.active() && m_model.sequence()) { // Sequence: in History now, on screen when we leave
         // The Preset is saved at capture time, not when the Overlay closes.
-        m_daemon.service<ThumbnailStack>().saveAutoProject(historyId, png, framed);
-        m_held.append({png, captureTime, name, framed, historyId, origin});
+        m_daemon.service<ThumbnailStack>().saveAutoProject(historyId, image, framed);
+        m_held.append({image, png, captureTime, name, framed, historyId, origin});
         return;
     }
     auto &stack = m_daemon.service<ThumbnailStack>();
-    const int id = stack.add(png, captureTime, name, framed);
+    const int id = stack.add(image, png, captureTime, name, framed);
     if (id < 0)
         return;
     stack.setHistoryId(id, historyId);
@@ -199,20 +199,16 @@ void Overlay::onConfirmedWindow(const WindowInfo &window) {
     }
     const qreal f = qreal(m_frozen.width()) / qMax(1, m_monitorRect.width());
     const QImage cut = cutWindow(m_frozen, window, f);
-    QByteArray png;
-    QBuffer buffer(&png);
-    buffer.open(QIODevice::WriteOnly);
-    if (cut.isNull() || !cut.save(&buffer, "PNG")) {
+    if (cut.isNull()) {
         m_daemon.service<Notifier>().notify(QStringLiteral("Tarn could not take the screenshot"),
                                             QStringLiteral("the window could not be cut out"));
         return;
     }
-    if (QImage::fromData(png, "PNG").isNull())
-        return;
+    const QFuture<QByteArray> png = encodePngInBackground(cut); // off the daemon's thread
     const QRect global = window.rect.translated(m_monitorRect.topLeft());
     const QString historyId = m_daemon.service<History>().record(
         png, {captureTime, QStringLiteral("window"), window.app, window.title, global});
-    deliver(png, captureTime, {QStringLiteral("window"), window.app, window.title}, framed, historyId, global);
+    deliver(cut, png, captureTime, {QStringLiteral("window"), window.app, window.title}, framed, historyId, global);
 }
 
 void Overlay::onConfirmed(const QRect &selection, OverlayModel::Mode mode) {
@@ -266,17 +262,13 @@ QImage Overlay::cropSelection(const QImage &frozen, const QRect &monitorRect, co
 
 void Overlay::takeArea(const QImage &frozen, const QRect &monitorRect, const QRect &selection, const QDateTime &captureTime,
                        bool framed) {
-    QByteArray png;
-    QBuffer buffer(&png);
-    buffer.open(QIODevice::WriteOnly);
     const QImage cropped = cropSelection(frozen, monitorRect, selection);
-    if (cropped.isNull() || !cropped.save(&buffer, "PNG")) {
+    if (cropped.isNull()) {
         const QString error = QStringLiteral("the selected area could not be cut out");
         m_daemon.service<Notifier>().notify(QStringLiteral("Tarn could not take the screenshot"), error);
         return;
     }
-    if (QImage::fromData(png, "PNG").isNull())
-        return;
+    const QFuture<QByteArray> png = encodePngInBackground(cropped); // off the daemon's thread
     // Which window it came from, by the snapshot taken before the Overlay opened:
     // the one the area overlaps most, or for the whole monitor the focused one.
     auto &bridge = m_daemon.service<HyprlandBridge>();
@@ -287,7 +279,7 @@ void Overlay::takeArea(const QImage &frozen, const QRect &monitorRect, const QRe
                            window ? window->title : QString()};
     const QString historyId = m_daemon.service<History>().record(
         png, {captureTime, wholeMonitor ? QStringLiteral("fullscreen") : QStringLiteral("area"), window ? window->app : QString(), window ? window->title : QString(), global});
-    deliver(png, captureTime, name, framed, historyId, global);
+    deliver(cropped, png, captureTime, name, framed, historyId, global);
 }
 
 } // namespace tarn
